@@ -24,7 +24,7 @@ func main() {
 		jobs <- i
 	}
 	close(jobs)
-
+	//
 	for j := 0; j < 100; j++ {
 		fmt.Println(<-results)
 	}
