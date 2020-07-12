@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"math/rand"
 	"time"
 )
 
@@ -12,21 +13,30 @@ func main() {
 	//example3()
 
 	// worker queue example1
-	// bufgfer channels of size 100
-	jobs := make(chan int, 100)
-	results := make(chan int, 100)
-	go worker(jobs, results)
-	go worker(jobs, results)
-	go worker(jobs, results)
-	go worker(jobs, results)
+	// buffer channels of size 100
+	/*
+		jobs := make(chan int, 100)
+		results := make(chan int, 100)
+		go worker(jobs, results)
+		go worker(jobs, results)
+		go worker(jobs, results)
+		go worker(jobs, results)
 
-	for i := 0; i < 100; i++ {
-		jobs <- i
-	}
-	close(jobs)
-	//
-	for j := 0; j < 100; j++ {
-		fmt.Println(<-results)
+		for i := 0; i < 100; i++ {
+			jobs <- i
+		}
+		close(jobs)
+		//
+		for j := 0; j < 100; j++ {
+			fmt.Println(<-results)
+		}
+	*/
+	// go with function asChan and merge, example merge two channels to one third channel
+	a := asChan(1, 3, 5, 7)
+	b := asChan(2, 4, 6, 8)
+	c := merge(a, b)
+	for v := range c {
+		fmt.Println(v)
 	}
 }
 
@@ -128,4 +138,46 @@ func fib(n int) int {
 		return n
 	}
 	return fib(n-1) + fib(n-2)
+}
+
+// asChan documentation, helper function to test merge, used in main
+func asChan(vs ...int) <-chan int {
+	c := make(chan int)
+	go func() {
+		defer close(c)
+		for _, v := range vs {
+			c <- v
+			time.Sleep(time.Duration(rand.Intn(1000)) * time.Millisecond)
+		}
+		//close(c)
+	}()
+	return c
+}
+
+// merge documentation, <-chan means, only read from channel
+func merge(a, b <-chan int) <-chan int {
+	c := make(chan int) // create channel
+	// anom function
+	go func() {
+		defer close(c)
+		for a != nil || b != nil {
+			select {
+			case v, ok := <-a:
+				if !ok {
+					fmt.Println("a is done")
+					a = nil // good for ther CPU
+					continue
+				}
+				c <- v
+			case v, ok := <-b:
+				if !ok {
+					fmt.Println("b is done")
+					b = nil // good for the CPU
+					continue
+				}
+				c <- v
+			}
+		}
+	}()
+	return c
 }
